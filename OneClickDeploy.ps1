@@ -33,8 +33,11 @@ param(
     [bool] $SRC_ORACLE,
     [bool] $SRC_EVENTHUB ,
     [string] $CTRL_SYNTAX,
-    [string] $SUBSCRIPTION_ID
+    [string] $SUBSCRIPTION_ID,
+    [bool] $CTRL_DEPLOY_SAMPLE
 )
+
+[string] $REF_BRANCH = "dev"
 
 # Generating Databricks Workspace URL
 
@@ -80,6 +83,7 @@ catch {
 Write-Output "Task: Generating Databricks resource token"
 
 try {
+    # unique resource ID for the Azure Databricks service
     [string] $TOKEN = (Get-AzAccessToken -Resource '2ff814a6-3304-4ab8-85cb-cd0e6f879c1d').Token
     Write-Host "Successful: Resource Token generated"
 }
@@ -151,7 +155,12 @@ if ($CTRL_DEPLOY_CLUSTER -and ($null -ne $DB_PAT)) {
     }
     # Set the request body
     $BODY = @"
-            {"cluster_name": "$CLUSTER_NAME", "spark_version": "$SPARK_VERSION", "autotermination_minutes": $AUTOTERMINATION_MINUTES, "num_workers": "$NUM_WORKERS", "node_type_id": "$NODE_TYPE_ID", "driver_node_type_id": "$DRIVER_NODE_TYPE_ID" }
+            {"cluster_name": "$CLUSTER_NAME", "spark_version": "$SPARK_VERSION", "autotermination_minutes": $AUTOTERMINATION_MINUTES, "num_workers": 0, "node_type_id": "$NODE_TYPE_ID", "spark_conf": {
+        "spark.master": "local[*, 4]",
+        "spark.databricks.cluster.profile": "singleNode"
+    }, "custom_tags": {
+        "ResourceClass": "SingleNode"
+    } }
 "@
 
     try {
@@ -264,6 +273,7 @@ if ($null -ne $DB_PAT) {
     }    
 
     # Create folder structure for examples
+    if ($CTRL_DEPLOY_SAMPLE) {
     Write-Host "Create folder for examples"
     try {
         $requestBodyFolder = @{
@@ -289,7 +299,7 @@ if ($null -ne $DB_PAT) {
         Write-Host "Importing example notebooks"
         
         #github api for a folder
-        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/Example?ref=dev" # change to respective git branch
+        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/Example?ref=$REF_BRANCH" # change to respective git branch
         
         # Calling GitHub API for getting the filenames under Artifacts/Example folder
         try {
@@ -357,7 +367,8 @@ if ($null -ne $DB_PAT) {
                 }            
             }
         }    
-    }    
+    } 
+}   
 
     # Upload Silver and Gold Layer notebooks for a batch source to its respective syntax folder
    
@@ -365,7 +376,7 @@ if ($null -ne $DB_PAT) {
 
         Write-Host "Task: Import Silver and Gold Layer notebooks for a batch source"
         #github api for a folder
-        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/" + $CTRL_SYNTAX + "?ref=dev" # change to respective git branch
+        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/" + $CTRL_SYNTAX + "?ref=$REF_BRANCH" # change to respective git branch
         
         # Calling GitHub API for getting the filenames under Artifacts/$CTRL_SYNTAX folder
         try {
@@ -440,7 +451,7 @@ if ($null -ne $DB_PAT) {
         Write-Host "Task: Import Bronze Layer notebook for raw file source"
         
         #github api for a folder
-        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/FileSource?ref=dev" # change to respective git branch
+        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/FileSource?ref=$REF_BRANCH" # change to respective git branch
         # Calling GitHub API for getting the filenames under Artifacts/$CTRL_SYNTAX folder
         try {
             $wr = Invoke-WebRequest -Uri $Artifactsuri
@@ -515,7 +526,7 @@ if ($null -ne $DB_PAT) {
         Write-Host "Task: Import Bronze Layer notebook for Azure SQL"
         
         # Get files under directory #github api for a folder
-        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/AzureSQLDb?ref=dev" # change to respective git branch
+        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/AzureSQLDb?ref=$REF_BRANCH" # change to respective git branch
         # Calling GitHub API for getting the filenames under Artifacts/$CTRL_SYNTAX folder
         try {
             $wr = Invoke-WebRequest -Uri $Artifactsuri
@@ -589,7 +600,7 @@ if ($null -ne $DB_PAT) {
         Write-Host "Task: Import bronze layer notebook for Azure MySQL"
         
         # Get files under directory #github api for a folder
-        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/AzureMySQL?ref=dev" # change to respective git branch
+        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/AzureMySQL?ref=$REF_BRANCH" # change to respective git branch
         # Calling GitHub API for getting the filenames under Artifacts/$CTRL_SYNTAX folder
         try {
             $wr = Invoke-WebRequest -Uri $Artifactsuri
@@ -663,7 +674,7 @@ if ($null -ne $DB_PAT) {
         Write-Host "Task: Import Bronze Layer notebooks for Azure PSQL"
         
         # Get files under directory #github api for a folder
-        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/AzurePostgreSQL?ref=dev" # change to respective git branch
+        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/AzurePostgreSQL?ref=$REF_BRANCH" # change to respective git branch
         # Calling GitHub API for getting the filenames under Artifacts/$CTRL_SYNTAX folder
         try {
             $wr = Invoke-WebRequest -Uri $Artifactsuri
@@ -737,7 +748,7 @@ if ($null -ne $DB_PAT) {
         Write-Host "Task: Import Bronze Layer notebooks for SQL on-prem"
         
         # Get files under directory #github api for a folder
-        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/SQLDbOnPrem?ref=dev" # change to respective git branch
+        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/SQLDbOnPrem?ref=$REF_BRANCH" # change to respective git branch
         # Calling GitHub API for getting the filenames under Artifacts/$CTRL_SYNTAX folder
         try {
             $wr = Invoke-WebRequest -Uri $Artifactsuri
@@ -812,7 +823,7 @@ if ($null -ne $DB_PAT) {
         Write-Host "Task: Import Bronze Layer notebooks for PSQL on-prem"
         
         # Get files under directory #github api for a folder
-        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/PostgreSQL?ref=dev" # change to respective git branch
+        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/PostgreSQL?ref=$REF_BRANCH" # change to respective git branch
         # Calling GitHub API for getting the filenames under Artifacts/$CTRL_SYNTAX folder
         try {
             $wr = Invoke-WebRequest -Uri $Artifactsuri
@@ -887,7 +898,7 @@ if ($null -ne $DB_PAT) {
         Write-Host "Task: Import Bronze Layer notebooks for Oracle"
 
         # Get files under directory #github api for a folder
-        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/Oracle?ref=dev" # change to respective git branch
+        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Batch/Oracle?ref=$REF_BRANCH" # change to respective git branch
         # Calling GitHub API for getting the filenames under Artifacts/$CTRL_SYNTAX folder
         try {
             $wr = Invoke-WebRequest -Uri $Artifactsuri
@@ -961,7 +972,7 @@ if ($null -ne $DB_PAT) {
         Write-Host "Task: Import bronze, silver and gold layer notebooks for EventHub stream"
         
         # Get files under directory #github api for a folder
-        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Stream/EventHub?ref=dev" # change to respective git branch
+        $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/$CTRL_SYNTAX/Stream/EventHub?ref=$REF_BRANCH" # change to respective git branch
         # Calling GitHub API for getting the filenames under Artifacts/$CTRL_SYNTAX folder
         try {
             $wr = Invoke-WebRequest -Uri $Artifactsuri
@@ -1062,7 +1073,7 @@ if ($CTRL_DEPLOY_PIPELINE -and ($null -ne $DB_PAT)) {
     }
 
     try {
-        $createPipelineResponse = Invoke-RestMethod -Uri "https://$WorkspaceUrl/api/2.0/pipelines" -Method POST -Headers $headers -Body ($pipelineConfig | ConvertTo-Json -Depth 10)
+        Invoke-RestMethod -Uri "https://$WorkspaceUrl/api/2.0/pipelines" -Method POST -Headers $headers -Body ($pipelineConfig | ConvertTo-Json -Depth 10)
         Write-Host "Successful: Pipeline is created"
     }
     catch {
@@ -1073,13 +1084,24 @@ if ($CTRL_DEPLOY_PIPELINE -and ($null -ne $DB_PAT)) {
 }
 
 # Upload data files to storage account
-if ($SA_EXISTS) {
+if ($CTRL_DEPLOY_SAMPLE) {
 
     Write-Host "Task: Upload data files to storage account"
+    #Get storage account name
+    try {
+        $StorageAccountNames = Get-AzStorageAccount -ResourceGroupName $RG_NAME | Select-Object -ExpandProperty StorageAccountName
+        $StorageAccountName = $StorageAccountNames | Where-Object { $_.StartsWith("samplesblob") }
+        Write-Host "Successful: Storage account name is generated"
+    }
+    catch {
+        Write-Host "Error while getting Storage Account name"
+        $errorMessage = $_.Exception.Message
+        Write-Host "Error message: $errorMessage"
+    }
 
     #Get storage account access key
     try {
-        $storageaccountkey = Get-AzStorageAccountKey -ResourceGroupName $RG_NAME -Name $SA_NAME;
+        $storageaccountkey = Get-AzStorageAccountKey -ResourceGroupName $RG_NAME -Name $StorageAccountName;
         Write-Host "Successful: Storage account access key is generated"
     }
     catch {
@@ -1090,7 +1112,7 @@ if ($SA_EXISTS) {
     
     #Create storage account context
     try {
-        $ctx = New-AzStorageContext -StorageAccountName $SA_NAME -StorageAccountKey $storageaccountkey.Value[0]
+        $ctx = New-AzStorageContext -StorageAccountName $StorageAccountName -StorageAccountKey $storageaccountkey.Value[0]
         Write-Host "Successful: Storage account context is created"
     }
     catch {
@@ -1099,7 +1121,7 @@ if ($SA_EXISTS) {
         Write-Host "Error message: $errorMessage"
     }
     #github api for a folder
-    $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/data?ref=dev" # change to respective git branch
+    $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/data?ref=$REF_BRANCH" # change to respective git branch
     # Calling GitHub API for getting the filenames under /data folder
     try {
         $wr = Invoke-WebRequest -Uri $Artifactsuri
@@ -1118,7 +1140,7 @@ if ($SA_EXISTS) {
     if ($getCsvFilenames) {
         Foreach ($filename in $fileNames) {
             try {
-                $url = "https://raw.githubusercontent.com/DatabricksFactory/databricks-migration/dev/data/$filename" # change to respective git branch
+                $url = "https://raw.githubusercontent.com/DatabricksFactory/databricks-migration/$REF_BRANCH/data/$filename" # change to respective git branch
             
                 $Webresults = Invoke-WebRequest $url -UseBasicParsing
             
