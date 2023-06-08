@@ -368,7 +368,7 @@ if ($null -ne $DB_PAT) {
                     }            
                 }
             }    
-        }
+        
             Write-Host "Importing blob to adls copy notebook"
         
             #github api for a folder
@@ -379,7 +379,7 @@ if ($null -ne $DB_PAT) {
                 $wr = Invoke-WebRequest -Uri $Artifactsuri1
                 $objects = $wr.Content | ConvertFrom-Json
                 $fileNames = $objects | Where-Object { $_.type -eq "file" } | Select-Object -exp name
-                Write-Host "Successful: getting the filenames under Artifacts/Example/$EXAMPLE_DATASET folder is successful"
+                Write-Host "Successful: getting the filenames under Artifacts/Example/ folder is successful"
                 $getExmpFilenames = $true
             }
             catch {
@@ -439,7 +439,8 @@ if ($null -ne $DB_PAT) {
                         Write-Host "Error message: $errorMessage"
                     }            
                 }
-            } 
+            }    
+        } 
     }   
 
     # Upload Silver and Gold Layer notebooks for a batch source to its respective syntax folder
