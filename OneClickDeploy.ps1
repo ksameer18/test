@@ -395,7 +395,7 @@ if ($null -ne $DB_PAT) {
             
                     try {
                         # Set the path to the notebook to be imported
-                        $url = "$NOTEBOOK_PATH/Example/$EXAMPLE_DATASET/$filename"
+                        $url = "$NOTEBOOK_PATH/Example/$filename"
                     
                         # Get the notebook
                         $Webresults = Invoke-WebRequest $url -UseBasicParsing
