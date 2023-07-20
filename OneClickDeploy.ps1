@@ -47,7 +47,11 @@ param(
 Write-Output "Task: Generating Databricks Workspace URL"
 
 try {
-    $token = (Get-AzAccessToken).Token
+    $Aztoken = Get-AzAccessToken
+    $token = $Aztoken.Token
+    $token
+    $tenant = $Aztoken.TenantId 
+    $tenant
     
     # https url for getting workspace details
     $url = "https://management.azure.com/subscriptions/" + $SUBSCRIPTION_ID + "/resourceGroups/" + $RG_NAME + "/providers/Microsoft.Databricks/workspaces/" + $WORKSPACE_NAME + "?api-version=2023-02-01"
@@ -277,7 +281,7 @@ $HEADERS = @{
 try {
     #https request for getting workspace id
     Write-Host "creating metastore"
-    $databricks_workspace_ID = ((Invoke-RestMethod -Method GET -Uri "https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG_NAME/providers/Microsoft.Databricks/workspaces/$WORKSPACE_NAME?api-version=2023-02-01" -Headers $HEADERS).workspaceId)
+    $databricks_workspace_ID = ((Invoke-RestMethod -Method GET -Uri "https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG_NAME/providers/Microsoft.Databricks/workspaces/$WORKSPACE_NAME?api-version=2023-02-01" -Headers $HEADERS).properties.workspaceId)
     Write-Output "Successful: Databricks API for getting workspace id is called"
 }
 catch {
