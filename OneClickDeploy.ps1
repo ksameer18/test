@@ -34,10 +34,12 @@ param(
     [bool] $SRC_EVENTHUB ,
     [string] $CTRL_SYNTAX,
     [string] $SUBSCRIPTION_ID,
-    [bool] $CTRL_DEPLOY_SAMPLE
+    [bool] $CTRL_DEPLOY_SAMPLEt,
+    [string] $SA_METASTORE,
+    [string] $SA_CONTAINER
 )
 
-[string] $REF_BRANCH = "dev"
+[string] $REF_BRANCH = "main"
 [string] $EXAMPLE_DATASET = "RetailOrg"
 
 # Generating Databricks Workspace URL
@@ -236,6 +238,129 @@ if ($CTRL_DEPLOY_CLUSTER -and ($null -ne $DB_PAT)) {
     }
 }
 
+# creating metastore
+
+# Set the headers        
+$HEADERS = @{
+    "Authorization" = "Bearer $DB_PAT"
+    "Content-Type"  = "application/json"
+}
+# Set the request body
+$BODY = @"
+{    "name": "adnocpoccatalog",
+"storage_root": "abfss://$SA_CONTAINER@$SA_METASTORE.dfs.core.windows.net/",
+"region": "eastus" }
+"@
+
+
+try {
+    #https request for creating metastore
+    Write-Host "creating metastore"
+    $METASTORE_ID = ((Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores" -Headers $HEADERS -Body $BODY).metastore_id)
+    Write-Output "Successful: Databricks API for creating the cluster is called"
+}
+catch {
+    Write-Host "Error while calling the Databricks API for creating metastore"
+    $errorMessage = $_.Exception.Message
+    Write-Host "Error message: $errorMessage"
+}
+
+# Assigning workspace
+
+#getting workspace id
+# Set the headers        
+$HEADERS = @{
+    "Authorization" = "Bearer $TOKEN"
+    "Content-Type"  = "application/json"
+}
+
+try {
+    #https request for getting workspace id
+    Write-Host "creating metastore"
+    $databricks_workspace_ID = ((Invoke-RestMethod -Method GET -Uri "https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG_NAME/providers/Microsoft.Databricks/workspaces/$WORKSPACE_NAME?api-version=2023-02-01" -Headers $HEADERS).workspaceId)
+    Write-Output "Successful: Databricks API for getting workspace id is called"
+}
+catch {
+    Write-Host "Error while calling the Databricks API for getting workspace id"
+    $errorMessage = $_.Exception.Message
+    Write-Host "Error message: $errorMessage"
+}
+# Set the headers        
+$HEADERS = @{
+    "Authorization" = "Bearer $DB_PAT"
+    "Content-Type"  = "application/json"
+}
+# Set the request body
+$BODY = @"
+{    "metastore_id": $METASTORE_ID,
+     "default_catalog_name": "adnocpoccatalog"}
+"@
+
+
+try {
+    #https request for Assigning workspace
+    Write-Host "creating metastore"
+    $Assign_ws = (Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.1/unity-catalog/workspaces/$databricks_workspace_ID/metastore" -Headers $HEADERS -Body $BODY)
+    Write-Output "Successful: Databricks API for Assigning workspace is called"
+}
+catch {
+    Write-Host "Error while calling the Databricks API for Assigning workspace"
+    $errorMessage = $_.Exception.Message
+    Write-Host "Error message: $errorMessage"
+}
+
+#create catalog
+# Set the headers        
+$HEADERS = @{
+    "Authorization" = "Bearer $DB_PAT"
+    "Content-Type"  = "application/json"
+}
+# Set the request body
+$BODY = @"
+{
+    "name": "adnocpoccatalog"
+}
+"@
+
+
+try {
+    #https request for create catalog
+    Write-Host "creating metastore"
+    $Assign_ws = (Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.1/unity-catalog/catalogs" -Headers $HEADERS -Body $BODY)
+    Write-Output "Successful: Databricks API for create catalog is called"
+}
+catch {
+    Write-Host "Error while calling the Databricks API for create catalog"
+    $errorMessage = $_.Exception.Message
+    Write-Host "Error message: $errorMessage"
+}
+
+#create schema
+# Set the headers        
+$HEADERS = @{
+    "Authorization" = "Bearer $DB_PAT"
+    "Content-Type"  = "application/json"
+}
+# Set the request body
+$BODY = @"
+{
+    "name": "adnocpocschema",
+    "catalog_name": "adnocpoccatalog"
+}
+"@
+
+try {
+    #https request for create schema
+    Write-Host "creating metastore"
+    $Assign_ws = (Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.1/unity-catalog/schemas" -Headers $HEADERS -Body $BODY)
+    Write-Output "Successful: Databricks API for create schema is called"
+}
+catch {
+    Write-Host "Error while calling the Databricks API for create schema"
+    $errorMessage = $_.Exception.Message
+    Write-Host "Error message: $errorMessage"
+}
+
 # Creating Folder strucrure and Importing Notebooks
 
 Write-Output "Task: Importing Notebooks"
@@ -388,6 +513,79 @@ if ($null -ne $DB_PAT) {
                     }            
                 } 
             }
+
+            Write-Host "Importing blob to adls copy notebook"
+        
+            #github api for a folder
+            $Artifactsuri1 = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/Example/" + $EXAMPLE_DATASET + "?ref=$REF_BRANCH" # change to respective git branch
+        
+            # Calling GitHub API for getting the filenames under Artifacts/Example/ folder
+            try {
+                $wr = Invoke-WebRequest -Uri $Artifactsuri1
+                $objects = $wr.Content | ConvertFrom-Json
+                $fileNames = $objects | Where-Object { $_.type -eq "file" } | Select-Object -exp name
+                Write-Host "Successful: getting the filenames under Artifacts/Example/ folder is successful"
+                $getExmpFilenames = $true
+            }
+            catch {
+                $getExmpFilenames = $false
+                Write-Host "Error while calling the GitHub API for getting the filenames under Artifacts/Example"
+                $errorMessage = $_.Exception.Message
+                Write-Host "Error message: $errorMessage"
+            }        
+
+            if ($getExmpFilenames) {
+
+                Foreach ($filename in $fileNames) {
+            
+                    try {
+                        # Set the path to the notebook to be imported
+                        $url = "$NOTEBOOK_PATH/Example/$EXAMPLE_DATASET/$filename"
+                    
+                        # Get the notebook
+                        $Webresults = Invoke-WebRequest $url -UseBasicParsing
+                    
+                        # Read the notebook file
+                        $notebookContent = $Webresults.Content
+                    
+                        # Base64 encode the notebook content
+                        $notebookBase64 = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($notebookContent))
+                        
+                        # Set the path
+                        $splitfilename = $filename.Split(".")
+                        $filenamewithoutextension = $splitfilename[0]
+                        $path = "/Shared/Example/$EXAMPLE_DATASET/$filenamewithoutextension";
+                    
+                        # Set the request body
+                        $requestBody = @{
+                            "content"  = $notebookBase64
+                            "path"     = $path
+                            "language" = "PYTHON"
+                            "format"   = "JUPYTER"
+                        }
+                    
+                        # Convert the request body to JSON
+                        $jsonBody = ConvertTo-Json -Depth 100 $requestBody
+                    }
+                    catch {
+                        Write-Host "Error while reading the raw copy notebook: $filename"
+                        $errorMessage = $_.Exception.Message
+                        Write-Host "Error message: $errorMessage"
+                    }
+                
+                    try {
+                        # Make the HTTP request to import the notebook
+                        $response = Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.0/workspace/import" -Headers $headers -Body $jsonBody  
+                        Write-Host "Successful: $filename is imported"
+                    }
+                    catch {
+                        Write-Host "Error while calling the Azure Databricks API for importing copy notebook: $filename"
+                        $errorMessage = $_.Exception.Message
+                        Write-Host "Error message: $errorMessage"
+                    }            
+                }
+            }
+
             #github api for a DeltaTable folder
             $Artifactsuri = "https://api.github.com/repos/DatabricksFactory/databricks-migration/contents/Artifacts/Example/RetailOrg/DeltaTable?ref=$REF_BRANCH" # change to respective git branch
         
@@ -1254,17 +1452,20 @@ if ($CTRL_DEPLOY_SAMPLE) {
         "Authorization" = "Bearer $DB_PAT"
         "Content-Type"  = "application/json"
     }
-    
+
+    # Create pipelines for the retail org dataset
+    Write-Host '[INFO] Create pipelines for the retail org dataset'
+
+    $pipelineCreateUrl = "https://$WorkspaceUrl/api/2.0/pipelines"
+
     # Create the pipeline for the batch processing of the retail org dataset
     Write-Host "[INFO] Create the pipeline for the batch processing of the retail org dataset"
-    
-    $pipelineCreateUrl = "https://$WorkspaceUrl/api/2.0/pipelines"
-    
-    $pipelineDefinitionJSON = @"
+        
+    $batchPipelineDefinitionJSON = @"
     {
         "name": "retail_org_batch_dlt",
         "edition": "ADVANCED",
-        "target": "retail_org_batch",
+        "target": "retail_org_dlt",
         "clusters": [
             {
                 "label": "default",
@@ -1296,7 +1497,7 @@ if ($CTRL_DEPLOY_SAMPLE) {
 "@
     
     try {
-        $batchPipelineId = (Invoke-RestMethod -Method POST -Uri $pipelineCreateUrl -Headers $HEADERS -Body $pipelineDefinitionJSON).pipeline_id
+        $batchPipelineId = (Invoke-RestMethod -Method POST -Uri $pipelineCreateUrl -Headers $HEADERS -Body $batchPipelineDefinitionJSON).pipeline_id
         Write-Host "[SUCCESS] Batch pipeline created successfully with Pipeline ID: $batchPipelineId"
     }
     catch {
@@ -1304,7 +1505,46 @@ if ($CTRL_DEPLOY_SAMPLE) {
         $errorMessage = $_.Exception.Message
         Write-Host "Error message: $errorMessage" 
     }
+
+    # Create the pipeline for the stream processing of the retail org dataset
+    Write-Host "[INFO] Create the pipeline for the stream processing of the retail org dataset"
     
+    $streamPipelineDefinitionJSON = @"
+    {
+        "name": "retail_org_stream_dlt",
+        "edition": "ADVANCED",
+        "target": "retail_org_dlt",
+        "clusters": [
+            {
+                "label": "default",
+                "num_workers": 1
+            }
+        ],
+        "development": true,
+        "continuous": false,
+        "channel": "CURRENT",
+        "photon": false,
+        "libraries": [
+            {
+                "notebook": {
+                    "path": "/Shared/Example/$EXAMPLE_DATASET/DeltaLiveTable/bronze_silver_gold_stream"
+                }
+            }
+        ]
+    }
+"@
+    
+    try {
+        $streamPipelineId = (Invoke-RestMethod -Method POST -Uri $pipelineCreateUrl -Headers $HEADERS -Body $streamPipelineDefinitionJSON).pipeline_id
+        Write-Host "[SUCCESS] Stream pipeline created successfully with Pipeline ID: $streamPipelineId"
+    }
+    catch {
+        Write-Host "[ERROR] Error while calling the Databricks API for creating the stream pipeline"
+        $errorMessage = $_.Exception.Message
+        Write-Host "Error message: $errorMessage" 
+    }
+
+
     # Create jobs for the retail org dataset
     Write-Host '[INFO] Create jobs for the retail org dataset'
     
@@ -1313,15 +1553,22 @@ if ($CTRL_DEPLOY_SAMPLE) {
     # Create the batch job (DeltaLiveTable)
     Write-Host '[INFO] Creating the batch job (DeltaLiveTable)'
     
+    # Runs daily at 08:00 AM (UTC+05:30)
     $dltBatchJobDefinition = @"
             {
                 "name": "retail_org_batch_dlt",
                 "max_concurrent_runs": 1,
+                "schedule": {
+                    "quartz_cron_expression": "0 0 8 * * ?",
+                    "timezone_id": "Asia/Kolkata",
+                    "pause_status": "PAUSED"
+                },
                 "tasks": [
                     {
-                        "task_key": "batch_processing_dlt",
+                        "task_key": "batch_processing",
                         "pipeline_task": {
-                            "pipeline_id": "$batchPipelineId"
+                            "pipeline_id": "$batchPipelineId",
+                            "full_refresh": false
                         }
                     }
                 ],
@@ -1341,13 +1588,55 @@ if ($CTRL_DEPLOY_SAMPLE) {
         }
     }
 
+    # Create the stream job (DeltaLiveTable)
+#     Write-Host '[INFO] Creating the stream job (DeltaLiveTable)'
+
+#     $dltStreamJobDefinition = @"
+#     {
+#         "name": "retail_org_stream_dlt",
+#         "continuous": {
+#             "pause_status": "PAUSED"
+#         },
+#         "max_concurrent_runs": 1,
+#         "tasks": [
+#             {
+#                 "task_key": "stream_processing",
+#                 "pipeline_task": {
+#                     "pipeline_id": "$streamPipelineId",
+#                     "full_refresh": false
+#                 }
+#             }
+#         ],
+#         "format": "MULTI_TASK"
+#     }
+# "@
+        
+#    if ($null -ne $streamPipelineId) {
+#      try {
+#          $streamJobId = (Invoke-RestMethod -Method POST -Uri $jobCreateUrl -Headers $HEADERS -Body $dltStreamJobDefinition).job_id
+#          Write-Host "[SUCCESS] Job successfully created for stream processing (DeltaLiveTable) with Job ID: $streamJobId"
+#      }
+#      catch {
+#          Write-Host "[ERROR] Error while calling the Databricks API for creating job for stream processing (DeltaLiveTable)"
+#          $errorMessage = $_.Exception.Message
+#          Write-Host "Error message: $errorMessage" 
+#      }
+#    }
+    
+
     # Create the batch job (DeltaTable)
     Write-Host '[INFO] Creating the batch job (DeltaTable)'
-    
+
+    # Runs daily at 08:00 AM (UTC+05:30)
     $dtBatchJobDefinition = @"
     {
         "name": "retail_org_batch_dt",
         "max_concurrent_runs": 1,
+        "schedule": {
+            "quartz_cron_expression": "0 0 8 * * ?",
+            "timezone_id": "Asia/Kolkata",
+            "pause_status": "PAUSED"
+        },
         "tasks": [
             {
                 "task_key": "bronze_layer",
@@ -1434,79 +1723,69 @@ if ($CTRL_DEPLOY_SAMPLE) {
     Write-Host '[INFO] Creating the stream job (DeltaTable)'
 
     $dtStreamJobDefinition = @"
+    {
+        "name": "retail_org_stream_dt",
+        "continuous": {
+            "pause_status": "PAUSED"
+        },
+        "max_concurrent_runs": 1,
+        "tasks": [
             {
-                "name": "retail_org_stream_dt",
-                "max_concurrent_runs": 1,
-                "tasks": [
+                "task_key": "stream_processing",
+                "notebook_task": {
+                    "notebook_path": "/Shared/Example/$EXAMPLE_DATASET/DeltaTable/bronze_silver_gold_stream",
+                    "source": "WORKSPACE"
+                },
+                "job_cluster_key": "Job_cluster",
+                "libraries": [
                     {
-                        "task_key": "publish_events",
-                        "notebook_task": {
-                            "notebook_path": "/Shared/Example/$EXAMPLE_DATASET/DeltaTable/publish_events-eventhub",
-                            "source": "WORKSPACE"
-                        },
-                        "job_cluster_key": "Job_cluster"
-                    },
-                    {
-                        "task_key": "stream_processing",
-                        "depends_on": [
-                            {
-                                "task_key": "publish_events"
-                            }
-                        ],
-                        "notebook_task": {
-                            "notebook_path": "/Shared/Example/$EXAMPLE_DATASET/DeltaTable/bronze_silver_gold_stream",
-                            "source": "WORKSPACE"
-                        },
-                        "job_cluster_key": "Job_cluster",
-                        "libraries": [
-                            {
-                                "maven": {
-                                    "coordinates": "com.microsoft.azure:azure-eventhubs-spark_2.12:2.3.22"
-                                }
-                            }
-                        ]
-                    }
-                ],
-                "job_clusters": [
-                    {
-                        "job_cluster_key": "Job_cluster",
-                        "new_cluster": {
-                            "cluster_name": "",
-                            "spark_version": "12.2.x-scala2.12",
-                            "spark_conf": {
-                                "spark.databricks.delta.preview.enabled": "true",
-                                "spark.master": "local[*, 4]",
-                                "spark.databricks.cluster.profile": "singleNode"
-                            },
-                            "azure_attributes": {
-                                "first_on_demand": 1,
-                                "availability": "ON_DEMAND_AZURE",
-                                "spot_bid_max_price": -1
-                            },
-                            "node_type_id": "Standard_DS3_v2",
-                            "custom_tags": {
-                                "ResourceClass": "SingleNode"
-                            },
-                            "spark_env_vars": {
-                                "PYSPARK_PYTHON": "/databricks/python3/bin/python3"
-                            },
-                            "enable_elastic_disk": true,
-                            "data_security_mode": "LEGACY_SINGLE_USER_STANDARD",
-                            "runtime_engine": "STANDARD",
-                            "num_workers": 0
+                        "maven": {
+                            "coordinates": "com.microsoft.azure:azure-eventhubs-spark_2.12:2.3.22"
                         }
                     }
-                ],
-                "format": "MULTI_TASK"
+                ]
             }
+        ],
+        "job_clusters": [
+            {
+                "job_cluster_key": "Job_cluster",
+                "new_cluster": {
+                    "cluster_name": "",
+                    "spark_version": "12.2.x-scala2.12",
+                    "spark_conf": {
+                        "spark.databricks.delta.preview.enabled": "true",
+                        "spark.master": "local[*, 4]",
+                        "spark.databricks.cluster.profile": "singleNode"
+                    },
+                    "azure_attributes": {
+                        "first_on_demand": 1,
+                        "availability": "ON_DEMAND_AZURE",
+                        "spot_bid_max_price": -1
+                    },
+                    "node_type_id": "Standard_DS3_v2",
+                    "custom_tags": {
+                        "ResourceClass": "SingleNode"
+                    },
+                    "spark_env_vars": {
+                        "PYSPARK_PYTHON": "/databricks/python3/bin/python3"
+                    },
+                    "enable_elastic_disk": true,
+                    "data_security_mode": "LEGACY_SINGLE_USER_STANDARD",
+                    "runtime_engine": "STANDARD",
+                    "num_workers": 0
+                }
+            }
+        ],
+        "format": "MULTI_TASK"
+    }
 "@
         
     try {
         $streamJobId = (Invoke-RestMethod -Method POST -Uri $jobCreateUrl -Headers $HEADERS -Body $dtStreamJobDefinition).job_id
-        Write-Host "[SUCCESS] Job successfully created for stream processing with Job ID: $streamJobId"
+        Write-Host "[SUCCESS] Job successfully created for stream processing (DeltaTable) with Job ID: $streamJobId"
     }
     catch {
-        Write-Host "[ERROR] Error while calling the Databricks API for creating job for stream processing"
+        Write-Host "[ERROR] Error while calling the Databricks API for creating job for stream processing (DeltaTable)"
         $errorMessage = $_.Exception.Message
         Write-Host "Error message: $errorMessage" 
     }
@@ -1522,7 +1801,7 @@ if ($CTRL_DEPLOY_SAMPLE) {
             {
                 "task_key": "blob_to_adls_copy",
                 "notebook_task": {
-                    "notebook_path": "/Shared/$EXAMPLE_DATASET/blob_to_adls_copy",
+                    "notebook_path": "/Shared/Example/$EXAMPLE_DATASET/blob_to_adls_copy",
                     "source": "WORKSPACE"
                 },
                 "job_cluster_key": "Job_cluster"
