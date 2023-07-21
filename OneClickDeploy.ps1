@@ -47,7 +47,7 @@ param(
 Write-Output "Task: Generating Databricks Workspace URL"
 
 try {
-    $AZTOKEN = (Get-AzAccessToken -ResourceUrl 'https://management.azure.com').Token
+    $AZTOKEN = (Get-AzAccessToken).Token
     $token = $Aztoken.Token
     $token
     $tenant = $Aztoken.TenantId 
