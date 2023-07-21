@@ -265,10 +265,11 @@ $BODYMETAJson = $BODYMETA | ConvertTo-Json -Depth 100
     #https request for creating metastore
     
     $metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
-    $metastoreuri
+    $metastoreuriJson = $metastoreuri | ConvertTo-Json -Depth 10
+    $metastoreuriJson
     $ErrorVariable = $null
 
-    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADERMETAJson -Body $BODYMETAJson -ErrorVariable ErrorVariable
+    $response = Invoke-RestMethod -Method POST -Uri $metastoreuriJson -Headers $HEADERMETAJson -Body $BODYMETAJson -ErrorVariable ErrorVariable
     if ($ErrorVariable) {
     Write-Host "Error Response:"
     Write-Host $ErrorVariable.Exception.Response.GetResponseStream().ReadToEnd()
