@@ -247,6 +247,7 @@ $HEADERMETA = @{
     "Authorization" = "Bearer $DB_PAT"
     "Content-Type"  = "application/json"
 }
+$HEADERMETAJson = $HEADERMETA | ConvertTo-Json -Depth 100
 
 $HEADERMETA
 # Set the request body
@@ -257,9 +258,8 @@ $BODYMETA = @"
     "region": "eastus"
 }
 "@
-$BODYMETA
 
-$DB_PAT
+$BODYMETAJson = $BODYMETA | ConvertTo-Json -Depth 100
 
 # try {
     #https request for creating metastore
@@ -268,7 +268,7 @@ $DB_PAT
     $metastoreuri
     $ErrorVariable = $null
 
-    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADERMETA -Body $BODYMETA -ErrorVariable ErrorVariable
+    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADERMETAJson -Body $BODYMETAJson -ErrorVariable ErrorVariable
     if ($ErrorVariable) {
     Write-Host "Error Response:"
     Write-Host $ErrorVariable.Exception.Response.GetResponseStream().ReadToEnd()
