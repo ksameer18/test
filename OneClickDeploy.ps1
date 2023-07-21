@@ -258,7 +258,9 @@ $BODY = @"
 try {
     #https request for creating metastore
     Write-Host "creating metastore"
-    $METASTORE = Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores" -Headers $HEADERS -Body $BODY
+    $metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
+    $metastoreuri
+    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADERS -Body $BODY
     Write-Output "Successful: Databricks API for creating the cluster is called"
 }
 catch {
