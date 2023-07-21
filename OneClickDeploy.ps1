@@ -245,6 +245,8 @@ $HEADERS = @{
     "Authorization" = "Bearer $DB_PAT"
     "Content-Type"  = "application/json"
 }
+
+$HEADERS
 # Set the request body
 $BODY = @"
 {
@@ -253,14 +255,22 @@ $BODY = @"
     "region": "eastus"
 }
 "@
+$BODY
 
+$DB_PAT
 
 try {
     #https request for creating metastore
     Write-Host "creating metastore"
     $metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
     $metastoreuri
-    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADERS -Body $BODY
+    $ErrorVariable = $null
+
+    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADERS -Body $BODY -ErrorVariable ErrorVariable
+    if ($ErrorVariable) {
+    Write-Host "Error Response:"
+    Write-Host $ErrorVariable.Exception.Response.GetResponseStream().ReadToEnd()
+}
     Write-Output "Successful: Databricks API for creating the cluster is called"
 }
 catch {
