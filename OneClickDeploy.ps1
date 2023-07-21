@@ -47,13 +47,13 @@ param(
 Write-Output "Task: Generating Databricks Workspace URL"
 
 try {
-    $Aztoken = (Get-AzAccessToken -Resource '2ff814a6-3304-4ab8-85cb-cd0e6f879c1d').Token
+    $AZTOKEN = (Get-AzAccessToken -ResourceUrl 'https://management.azure.com').Token
     $token = $Aztoken.Token
     $token
     $tenant = $Aztoken.TenantId 
     $tenant
 
-    Set-AzContext -Tenant $tenant
+
     
     # https url for getting workspace details
     $url = "https://management.azure.com/subscriptions/" + $SUBSCRIPTION_ID + "/resourceGroups/" + $RG_NAME + "/providers/Microsoft.Databricks/workspaces/" + $WORKSPACE_NAME + "?api-version=2023-02-01"
