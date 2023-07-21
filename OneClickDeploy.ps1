@@ -52,6 +52,9 @@ try {
     $token
     $tenant = $Aztoken.TenantId 
     $tenant
+    $USERID = $Aztoken.UserId 
+    $USERID
+
 
     $resourceId = "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG_NAME/providers/Microsoft.Databricks/workspaces/$WORKSPACE_NAME"
     $workspaceUrl=(Get-AzResource -ResourceId $resourceId -ExpandProperties).Properties.workspaceUrl
@@ -252,20 +255,26 @@ if ($CTRL_DEPLOY_CLUSTER -and ($null -ne $DB_PAT)) {
 $HEADERS = @{
     "Authorization" = "Bearer $DB_PAT"
     "Content-Type"  = "application/json"
-}
-# Set the request body
-$BODY = @"
-{    "name": "adnocpoccatalog",
-"storage_root": "abfss://$SA_CONTAINER@$SA_METASTORE.dfs.core.windows.net/",
-"region": "eastus" }
-"@
+ }
+ 
+ $HEADERS
+ 
+ # Set the request body
+ $BODY = @"
+ {
+    "name": "adnocpoccatalog",
+    "storage_root": "abfss://$SA_CONTAINER@$SA_METASTORE.dfs.core.windows.net/",
+    "region": "eastus"
+ }
+ "@
 
 
 try {
     #https request for creating metastore
     Write-Host "creating metastore"
-    $METASTORE_ID = ((Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores" -Headers $HEADERS -Body $BODY).metastore_id)
-    Write-Output "Successful: Databricks API for creating the cluster is called"
+    $metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
+    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADERS -Body $BODY
+    Write-Output "Successful: Databricks API for creating the metastore is called"
 }
 catch {
     Write-Host "Error while calling the Databricks API for creating metastore"
