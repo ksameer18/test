@@ -57,7 +57,7 @@ try {
     Set-AzureSubscription -SubscriptionName "Microsoft Azure Sponsorship"
     
     # https url for getting workspace details
-    $url = "https://management.azure.com/subscriptions/" + $SUBSCRIPTION_ID + "/resourceGroups/" + $RG_NAME + "/providers/Microsoft.Databricks/workspaces/" + $WORKSPACE_NAME + "?api-version=2023-02-01"
+    $url = "https://management.core.windows.net/subscriptions/" + $SUBSCRIPTION_ID + "/resourceGroups/" + $RG_NAME + "/providers/Microsoft.Databricks/workspaces/" + $WORKSPACE_NAME + "?api-version=2023-02-01"
     
     # Set the headers
     $headerstkn = @{ Authorization = "Bearer $token"; 'ContentType' = "application/json" }
