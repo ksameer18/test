@@ -239,7 +239,8 @@ if ($CTRL_DEPLOY_CLUSTER -and ($null -ne $DB_PAT)) {
 }
 
 # creating metastore
-
+if ($null -ne $DB_PAT) {
+Write-Host "creating metastore"
 # Set the headers        
 $HEADERS = @{
     "Authorization" = "Bearer $DB_PAT"
@@ -261,7 +262,7 @@ $DB_PAT
 
 try {
     #https request for creating metastore
-    Write-Host "creating metastore"
+    
     $metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
     $metastoreuri
     $ErrorVariable = $null
@@ -277,6 +278,7 @@ catch {
     Write-Host "Error while calling the Databricks API for creating metastore"
     $errorMessage = $_.Exception.Message
     Write-Host "Error message: $errorMessage"
+}
 }
 
 # Creating Folder strucrure and Importing Notebooks
