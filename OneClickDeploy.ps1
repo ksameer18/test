@@ -54,7 +54,6 @@ try {
     $tenant
 
     Set-AzContext -Tenant $tenant
-    Set-AzureSubscription -SubscriptionName "Microsoft Azure Sponsorship"
     
     # https url for getting workspace details
     $url = "https://management.core.windows.net/subscriptions/" + $SUBSCRIPTION_ID + "/resourceGroups/" + $RG_NAME + "/providers/Microsoft.Databricks/workspaces/" + $WORKSPACE_NAME + "?api-version=2023-02-01"
