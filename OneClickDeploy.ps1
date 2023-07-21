@@ -34,12 +34,12 @@ param(
     [bool] $SRC_EVENTHUB ,
     [string] $CTRL_SYNTAX,
     [string] $SUBSCRIPTION_ID,
-    [bool] $CTRL_DEPLOY_SAMPLEt,
+    [bool] $CTRL_DEPLOY_SAMPLE,
     [string] $SA_METASTORE,
     [string] $SA_CONTAINER
 )
 
-[string] $REF_BRANCH = "main"
+[string] $REF_BRANCH = "dev"
 [string] $EXAMPLE_DATASET = "RetailOrg"
 
 # Generating Databricks Workspace URL
@@ -47,28 +47,17 @@ param(
 Write-Output "Task: Generating Databricks Workspace URL"
 
 try {
-    $AZTOKEN = (Get-AzAccessToken).Token
-    $token = $Aztoken.Token
-    $token
-    $tenant = $Aztoken.TenantId 
-    $tenant
-    $USERID = $Aztoken.UserId 
-    $USERID
-
-
-    $resourceId = "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG_NAME/providers/Microsoft.Databricks/workspaces/$WORKSPACE_NAME"
-    $workspaceUrl=(Get-AzResource -ResourceId $resourceId -ExpandProperties).Properties.workspaceUrl
-    $workspaceUrl
-    #$workspaceUrl=(Get-AzResource -Name $WORKSPACE_NAME -ResourceGroupName $RG_NAME -ExpandProperties).Properties.workspaceUrl
+    $token = (Get-AzAccessToken).Token
+    
     # https url for getting workspace details
-    #$url = "https://management.azure.com/subscriptions/" + $SUBSCRIPTION_ID + "/resourceGroups/" + $RG_NAME + "/providers/Microsoft.Databricks/workspaces/" + $WORKSPACE_NAME + "?api-version=2023-02-01"
+    $url = "https://management.azure.com/subscriptions/" + $SUBSCRIPTION_ID + "/resourceGroups/" + $RG_NAME + "/providers/Microsoft.Databricks/workspaces/" + $WORKSPACE_NAME + "?api-version=2023-02-01"
     
     # Set the headers
-    #$headerstkn = @{ Authorization = "Bearer $token"; 'ContentType' = "application/json" }
+    $headerstkn = @{ Authorization = "Bearer $token"; 'ContentType' = "application/json" }
     
     #call http method to get workspace url
-    #$resurl = Invoke-RestMethod -Method Get -ContentType "application/json" -Uri $url  -Headers $headerstkn
-    #$WorkspaceUrl = $resurl.properties.workspaceUrl
+    $resurl = Invoke-RestMethod -Method Get -ContentType "application/json" -Uri $url  -Headers $headerstkn
+    $WorkspaceUrl = $resurl.properties.workspaceUrl
     Write-Host "Successful: Databricks workspace url is generated"
 }
 catch {
@@ -255,34 +244,28 @@ if ($CTRL_DEPLOY_CLUSTER -and ($null -ne $DB_PAT)) {
 $HEADERS = @{
     "Authorization" = "Bearer $DB_PAT"
     "Content-Type"  = "application/json"
- }
- 
- $HEADERS
- 
- # Set the request body
- $BODY = @"
- {
+}
+# Set the request body
+$BODY = @"
+{
     "name": "adnocpoccatalog",
     "storage_root": "abfss://$SA_CONTAINER@$SA_METASTORE.dfs.core.windows.net/",
     "region": "eastus"
- }
- "@
+}
+"@
 
 
 try {
     #https request for creating metastore
     Write-Host "creating metastore"
-    $metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
-    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADERS -Body $BODY
-    Write-Output "Successful: Databricks API for creating the metastore is called"
+    $METASTORE = Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores" -Headers $HEADERS -Body $BODY
+    Write-Output "Successful: Databricks API for creating the cluster is called"
 }
 catch {
     Write-Host "Error while calling the Databricks API for creating metastore"
     $errorMessage = $_.Exception.Message
     Write-Host "Error message: $errorMessage"
 }
-
-
 
 # Creating Folder strucrure and Importing Notebooks
 
