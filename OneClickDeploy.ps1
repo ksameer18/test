@@ -54,16 +54,16 @@ try {
     $tenant
 
 
-    
+    $workspaceUrl=(Get-AzResource -Name $WORKSPACE_NAME -ResourceGroupName $RG_NAME -ExpandProperties).Properties.workspaceUrl
     # https url for getting workspace details
-    $url = "https://management.azure.com/subscriptions/" + $SUBSCRIPTION_ID + "/resourceGroups/" + $RG_NAME + "/providers/Microsoft.Databricks/workspaces/" + $WORKSPACE_NAME + "?api-version=2023-02-01"
+    #$url = "https://management.azure.com/subscriptions/" + $SUBSCRIPTION_ID + "/resourceGroups/" + $RG_NAME + "/providers/Microsoft.Databricks/workspaces/" + $WORKSPACE_NAME + "?api-version=2023-02-01"
     
     # Set the headers
-    $headerstkn = @{ Authorization = "Bearer $token"; 'ContentType' = "application/json" }
+    #$headerstkn = @{ Authorization = "Bearer $token"; 'ContentType' = "application/json" }
     
     #call http method to get workspace url
-    $resurl = Invoke-RestMethod -Method Get -ContentType "application/json" -Uri $url  -Headers $headerstkn
-    $WorkspaceUrl = $resurl.properties.workspaceUrl
+    #$resurl = Invoke-RestMethod -Method Get -ContentType "application/json" -Uri $url  -Headers $headerstkn
+    #$WorkspaceUrl = $resurl.properties.workspaceUrl
     Write-Host "Successful: Databricks workspace url is generated"
 }
 catch {
