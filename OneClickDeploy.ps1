@@ -52,7 +52,9 @@ try {
     $token
     $tenant = $Aztoken.TenantId 
     $tenant
-    $workspaceUrl=(Get-AzResource -ResourceId "/subscriptions/" + $SUBSCRIPTION_ID + "/resourceGroups/" + $RG_NAME + "/providers/Microsoft.Databricks/workspaces/" + $WORKSPACE_NAME -ExpandProperties).Properties.workspaceUrl
+
+    $resourceId = "/subscriptions/$SUBSCRIPTION_ID/resourceGroups/$RG_NAME/providers/Microsoft.Databricks/workspaces/$WORKSPACE_NAME"
+    $workspaceUrl=(Get-AzResource -ResourceId $resourceId -ExpandProperties).Properties.workspaceUrl
 
     #$workspaceUrl=(Get-AzResource -Name $WORKSPACE_NAME -ResourceGroupName $RG_NAME -ExpandProperties).Properties.workspaceUrl
     # https url for getting workspace details
