@@ -150,9 +150,10 @@ catch {
 
 # Creating All-purpose compute cluster
 
-Write-Output "Task: Creating all-purpose compute cluster"
+
 
 if ($CTRL_DEPLOY_CLUSTER -and ($null -ne $DB_PAT)) {
+    Write-Output "Task: Creating all-purpose compute cluster"
     # Set the headers        
     $HEADERS = @{
         "Authorization" = "Bearer $DB_PAT"
@@ -242,43 +243,43 @@ if ($CTRL_DEPLOY_CLUSTER -and ($null -ne $DB_PAT)) {
 if ($null -ne $DB_PAT) {
 Write-Host "creating metastore"
 # Set the headers        
-$HEADERS = @{
+$HEADERMETA = @{
     "Authorization" = "Bearer $DB_PAT"
     "Content-Type"  = "application/json"
 }
 
-$HEADERS
+$HEADERMETA
 # Set the request body
-$BODY = @"
+$BODYMETA = @"
 {
     "name": "adnocpoccatalog",
     "storage_root": "abfss://$SA_CONTAINER@$SA_METASTORE.dfs.core.windows.net/",
     "region": "eastus"
 }
 "@
-$BODY
+$BODYMETA
 
 $DB_PAT
 
-try {
+# try {
     #https request for creating metastore
     
     $metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
     $metastoreuri
     $ErrorVariable = $null
 
-    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADERS -Body $BODY -ErrorVariable ErrorVariable
+    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADERMETA -Body $BODYMETA -ErrorVariable ErrorVariable
     if ($ErrorVariable) {
     Write-Host "Error Response:"
     Write-Host $ErrorVariable.Exception.Response.GetResponseStream().ReadToEnd()
 }
-    Write-Output "Successful: Databricks API for creating the cluster is called"
-}
-catch {
-    Write-Host "Error while calling the Databricks API for creating metastore"
-    $errorMessage = $_.Exception.Message
-    Write-Host "Error message: $errorMessage"
-}
+    #Write-Output "Successful: Databricks API for creating the cluster is called"
+# }
+# catch {
+#     Write-Host "Error while calling the Databricks API for creating metastore"
+#     $errorMessage = $_.Exception.Message
+#     Write-Host "Error message: $errorMessage"
+# }
 }
 
 # Creating Folder strucrure and Importing Notebooks
