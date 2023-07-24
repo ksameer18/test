@@ -158,6 +158,9 @@ catch {
     }
 }
 
+
+$ResponseInfo = (Invoke-RestMethod -Method POST -Uri https://$WorkspaceUrl/api/2.0/token-management/tokens/$Token_info).token_info
+$ResponseInfo
 # Creating All-purpose compute cluster
 
 
