@@ -128,7 +128,7 @@ try {
     #https request for generating token
     Write-Host "Attempt 1 : Generating Personal Access Token"
     $DB_PAT = ((Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.0/token/create" -Headers $HEADERS -Body $BODY).token_value)
-    $DB_PAT_TEST = ((Invoke-RestMethod -Method POST -Uri "https://adb-2435204929582709.9.azuredatabricks.net/api/2.0/token/create" -Headers $HEADERS -Body $BODY).token_value)
+    
     Write-Output "Successful: Personal Access Token generated"
     $DB_PAT
 }
@@ -247,7 +247,7 @@ if ($null -ne $DB_PAT) {
 Write-Host "creating metastore"
 # Set the headers        
 $HEADER = @{
-    "Authorization" = "Bearer $DB_PAT_TEST"
+    "Authorization" = "Bearer $DB_PAT"
     "Content-Type"  = "application/json"
 }
 
@@ -257,7 +257,7 @@ $HEADER
 $BODYMETA = @"
 {
     "name": "adnocpoccatalog",
-    "storage_root": "abfss://containerformetastore@sametastore64g7nbdy5lngu.dfs.core.windows.net/",
+    "storage_root": "abfss://$SA_CONTAINER@$SA_METASTORE.dfs.core.windows.net/",
     "region": "eastus"
 }
 "@
