@@ -245,7 +245,6 @@ Write-Host "creating metastore"
 # Set the headers        
 $HEADER = @{
     "Authorization" = "Bearer $DB_PAT"
-    "Content-Type"  = "application/json"
 }
 
 
@@ -271,6 +270,8 @@ $BODYMETAJson = $BODYMETA | ConvertTo-Json -Depth 10
     if ($ErrorVariable) {
     Write-Host "Error Response:"
     Write-Host $ErrorVariable.Exception.Response.GetResponseStream().ReadToEnd()
+    $errorMessage = $_.Exception.Message
+    Write-Host "Error message: $errorMessage"
 }
     #Write-Output "Successful: Databricks API for creating the cluster is called"
 # }
