@@ -265,7 +265,7 @@ $BODYMETAJson = $BODYMETA | ConvertTo-Json -Depth 10
     $metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
     $metastoreuri
     $ErrorVariable = $null
-
+try{
     $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADER -Body $BODYMETAJson -ErrorVariable ErrorVariable
     $response
     if ($ErrorVariable) {
@@ -273,6 +273,16 @@ $BODYMETAJson = $BODYMETA | ConvertTo-Json -Depth 10
     Write-Host $ErrorVariable.Exception.Response.GetResponseStream().ReadToEnd()
     $errorMessage = $_.Exception.Message
     Write-Host "Error message: $errorMessage"
+}
+}
+catch{
+    $response
+    if ($ErrorVariable) {
+    Write-Host "Error Response:"
+    Write-Host $ErrorVariable.Exception.Response.GetResponseStream().ReadToEnd()
+    $errorMessage = $_.Exception.Message
+    Write-Host "Error message: $errorMessage"
+    }
 }
     #Write-Output "Successful: Databricks API for creating the cluster is called"
 # }
