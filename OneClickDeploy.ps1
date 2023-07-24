@@ -254,31 +254,42 @@ $HEADER = @{
 $HEADER
 
 # Set the request body
-$BODYMETA = @"
+$BODY = @"
 {
     "name": "adnocpoccatalog",
     "storage_root": "abfss://$SA_CONTAINER@$SA_METASTORE.dfs.core.windows.net/",
     "region": "eastus"
 }
 "@
-$BODYMETA
-$BODYMETAJson = $BODYMETA | ConvertTo-Json -Depth 10
-$BODYMETAJson
+$BODY
 
+$metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
+$metastoreuri
+
+# https request for creating metastore
   try {
-     #https request for creating metastore
-    
-     $metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
-     $metastoreuri
-     $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADER -Body $BODYMETA 
-     $response
-     Write-Output "Successful: Databricks API for creating the cluster is called"
+    Write-Output "Attempt 1: creating metastore"
+    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADER -Body $BODY 
+    $response
+    Write-Output "Successful: Databricks API for creating the cluster is called"
   }
   catch {
-      Write-Host "Error while calling the Databricks API for creating metastore"
-      $errorMessage = $_.Exception.Message
-      Write-Host "Error message: $errorMessage"
-  }
+    Write-Host "Error while calling the Databricks API for creating metastore"
+    $errorMessage = $_.Exception.Message
+    Write-Host "Error message: $errorMessage"
+    Start-Sleep -Seconds $RETRY_TIME
+    try{
+    Write-Output "Attempt 2: creating metastore"
+    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADER -Body $BODY 
+    $response
+    Write-Output "Successful: Databricks API for creating the cluster is called"
+    }
+    catch {
+    Write-Host "Error while calling the Databricks API for creating metastore"
+    $errorMessage = $_.Exception.Message
+    Write-Host "Error message: $errorMessage"
+    }
+}
 
 }
 
