@@ -127,10 +127,14 @@ $BODY = @"
 try {
     #https request for generating token
     Write-Host "Attempt 1 : Generating Personal Access Token"
-    $DB_PAT = ((Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.0/token/create" -Headers $HEADERS -Body $BODY).token_value)
-    
+    $Response = Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.0/token/create" -Headers $HEADERS -Body $BODY
+    $DB_PAT = $Response.token_value
+    $Token_info = $Response.token_info.token_id
     Write-Output "Successful: Personal Access Token generated"
     $DB_PAT
+    $Token_info
+
+    
 }
 catch {
     Write-Host "Attempt 1 : Error while calling the Databricks API for generating Personal Access Token"
@@ -139,8 +143,12 @@ catch {
     Write-Host "Error message: $errorMessage" 
     try {
         Write-Host "Attempt 2 : generating Personal Access Token"
-        $DB_PAT = ((Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.0/token/create" -Headers $HEADERS -Body $BODY).token_value)
+        $Response = Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.0/token/create" -Headers $HEADERS -Body $BODY
+        $DB_PAT = $Response.token_value
+        $Token_info = $Response.token_info.token_id
         Write-Output "Successful: Personal Access Token generated"
+        $DB_PAT
+        $Token_info
     }
     catch {
         Write-Host "Attempt 2 : Error while calling the Databricks API for generating Personal Access Token"
