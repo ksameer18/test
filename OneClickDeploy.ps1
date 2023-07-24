@@ -129,6 +129,7 @@ try {
     Write-Host "Attempt 1 : Generating Personal Access Token"
     $DB_PAT = ((Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.0/token/create" -Headers $HEADERS -Body $BODY).token_value)
     Write-Output "Successful: Personal Access Token generated"
+    $DB_PAT
 }
 catch {
     Write-Host "Attempt 1 : Error while calling the Databricks API for generating Personal Access Token"
@@ -207,6 +208,7 @@ if ($CTRL_DEPLOY_CLUSTER -and ($null -ne $DB_PAT)) {
             
             $HEADERS = @{
                 "Authorization" = "Bearer $DB_PAT"
+                
             }
             
             try {
@@ -245,8 +247,10 @@ Write-Host "creating metastore"
 # Set the headers        
 $HEADER = @{
     "Authorization" = "Bearer $DB_PAT"
+    "Content-Type"  = "application/json"
 }
 
+$HEADER
 
 # Set the request body
 $BODYMETA = @"
@@ -258,39 +262,23 @@ $BODYMETA = @"
 "@
 
 $BODYMETAJson = $BODYMETA | ConvertTo-Json -Depth 10
+$BODYMETAJson
 
-# try {
-    #https request for creating metastore
+#  try {
+#     #https request for creating metastore
     
-    $metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
-    $metastoreuri
-    $ErrorVariable = $null
-try{
-    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADER -Body $BODYMETAJson -ErrorVariable ErrorVariable
-    $response
-    if ($ErrorVariable) {
-    Write-Host "Error Response:"
-    Write-Host $ErrorVariable.Exception.Response.GetResponseStream().ReadToEnd()
-    $errorMessage = $_.Exception.Message
-    Write-Host "Error message: $errorMessage"
-}
-}
-catch{
-    $response
-    if ($ErrorVariable) {
-    Write-Host "Error Response:"
-    Write-Host $ErrorVariable.Exception.Response.GetResponseStream().ReadToEnd()
-    $errorMessage = $_.Exception.Message
-    Write-Host "Error message: $errorMessage"
-    }
-}
-    #Write-Output "Successful: Databricks API for creating the cluster is called"
-# }
-# catch {
-#     Write-Host "Error while calling the Databricks API for creating metastore"
-#     $errorMessage = $_.Exception.Message
-#     Write-Host "Error message: $errorMessage"
-# }
+#     $metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
+#     $metastoreuri
+#     $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADER -Body $BODYMETAJson 
+#     $response
+#     Write-Output "Successful: Databricks API for creating the cluster is called"
+#  }
+#  catch {
+#      Write-Host "Error while calling the Databricks API for creating metastore"
+#      $errorMessage = $_.Exception.Message
+#      Write-Host "Error message: $errorMessage"
+#  }
+
 }
 
 # Creating Folder strucrure and Importing Notebooks
