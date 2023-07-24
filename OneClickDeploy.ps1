@@ -267,6 +267,7 @@ $BODYMETAJson = $BODYMETA | ConvertTo-Json -Depth 10
     $ErrorVariable = $null
 
     $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADER -Body $BODYMETAJson -ErrorVariable ErrorVariable
+    $response
     if ($ErrorVariable) {
     Write-Host "Error Response:"
     Write-Host $ErrorVariable.Exception.Response.GetResponseStream().ReadToEnd()
