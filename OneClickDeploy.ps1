@@ -268,7 +268,7 @@ $BODYMETAJson
   try {
      #https request for creating metastore
     
-     $metastoreuri = "https://adb-2435204929582709.9.azuredatabricks.net/api/2.1/unity-catalog/metastores"
+     $metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
      $metastoreuri
      $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADER -Body $BODYMETA 
      $response
