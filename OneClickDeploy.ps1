@@ -247,23 +247,34 @@ if ($null -ne $DB_PAT) {
 Write-Host "creating metastore"
 # Set the headers        
 $HEADER = @{
-    "Authorization" = "Bearer $DB_PAT"
+    "Authorization" = "Bearer $TOKEN"
     "Content-Type"  = "application/json"
 }
 
 $HEADER
 
 # Set the request body
+# $BODY = @"
+# {
+#     "name": "adnocpoccatalog",
+#     "storage_root": "abfss://$SA_CONTAINER@$SA_METASTORE.dfs.core.windows.net/",
+#     "region": "eastus"
+# }
+# "@
+
 $BODY = @"
 {
+    "metastore_info": {
     "name": "adnocpoccatalog",
     "storage_root": "abfss://$SA_CONTAINER@$SA_METASTORE.dfs.core.windows.net/",
     "region": "eastus"
+    }
 }
 "@
+    
 $BODY
 
-$metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
+$metastoreuri = "https://accounts.azuredatabricks.net/api/2.0/accounts/e3fee832-01a5-4a5f-8ff0-2bbe4ce02caa/metastores"
 $metastoreuri
 
 # https request for creating metastore
