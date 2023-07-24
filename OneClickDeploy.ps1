@@ -243,13 +243,12 @@ if ($CTRL_DEPLOY_CLUSTER -and ($null -ne $DB_PAT)) {
 if ($null -ne $DB_PAT) {
 Write-Host "creating metastore"
 # Set the headers        
-$HEADERMETA = @{
+$HEADER = @{
     "Authorization" = "Bearer $DB_PAT"
     "Content-Type"  = "application/json"
 }
-$HEADERMETAJson = $HEADERMETA | ConvertTo-Json -Depth 100
 
-$HEADERMETA
+
 # Set the request body
 $BODYMETA = @"
 {
@@ -259,17 +258,16 @@ $BODYMETA = @"
 }
 "@
 
-$BODYMETAJson = $BODYMETA | ConvertTo-Json -Depth 100
+$BODYMETAJson = $BODYMETA | ConvertTo-Json -Depth 10
 
 # try {
     #https request for creating metastore
     
     $metastoreuri = "https://$WorkspaceUrl/api/2.1/unity-catalog/metastores"
-    $metastoreuriJson = $metastoreuri | ConvertTo-Json -Depth 10
-    $metastoreuriJson
+    $metastoreuri
     $ErrorVariable = $null
 
-    $response = Invoke-RestMethod -Method POST -Uri $metastoreuriJson -Headers $HEADERMETAJson -Body $BODYMETAJson -ErrorVariable ErrorVariable
+    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADER -Body $BODYMETAJson -ErrorVariable ErrorVariable
     if ($ErrorVariable) {
     Write-Host "Error Response:"
     Write-Host $ErrorVariable.Exception.Response.GetResponseStream().ReadToEnd()
