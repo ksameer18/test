@@ -34,9 +34,7 @@ param(
     [bool] $SRC_EVENTHUB ,
     [string] $CTRL_SYNTAX,
     [string] $SUBSCRIPTION_ID,
-    [bool] $CTRL_DEPLOY_SAMPLE,
-    [string] $SA_METASTORE,
-    [string] $SA_CONTAINER
+    [bool] $CTRL_DEPLOY_SAMPLE
 )
 
 [string] $REF_BRANCH = "dev"
@@ -127,14 +125,8 @@ $BODY = @"
 try {
     #https request for generating token
     Write-Host "Attempt 1 : Generating Personal Access Token"
-    $Response = Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.0/token/create" -Headers $HEADERS -Body $BODY
-    $DB_PAT = $Response.token_value
-    $Token_info = $Response.token_info.token_id
+    $DB_PAT = ((Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.0/token/create" -Headers $HEADERS -Body $BODY).token_value)
     Write-Output "Successful: Personal Access Token generated"
-    $DB_PAT
-    $Token_info
-
-    
 }
 catch {
     Write-Host "Attempt 1 : Error while calling the Databricks API for generating Personal Access Token"
@@ -143,12 +135,8 @@ catch {
     Write-Host "Error message: $errorMessage" 
     try {
         Write-Host "Attempt 2 : generating Personal Access Token"
-        $Response = Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.0/token/create" -Headers $HEADERS -Body $BODY
-        $DB_PAT = $Response.token_value
-        $Token_info = $Response.token_info.token_id
+        $DB_PAT = ((Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.0/token/create" -Headers $HEADERS -Body $BODY).token_value)
         Write-Output "Successful: Personal Access Token generated"
-        $DB_PAT
-        $Token_info
     }
     catch {
         Write-Host "Attempt 2 : Error while calling the Databricks API for generating Personal Access Token"
@@ -158,15 +146,11 @@ catch {
     }
 }
 
-
-$ResponseInfo = (Invoke-RestMethod -Method POST -Uri https://$WorkspaceUrl/api/2.0/token-management/tokens/$Token_info).token_info
-$ResponseInfo
 # Creating All-purpose compute cluster
 
-
+Write-Output "Task: Creating all-purpose compute cluster"
 
 if ($CTRL_DEPLOY_CLUSTER -and ($null -ne $DB_PAT)) {
-    Write-Output "Task: Creating all-purpose compute cluster"
     # Set the headers        
     $HEADERS = @{
         "Authorization" = "Bearer $DB_PAT"
@@ -220,7 +204,6 @@ if ($CTRL_DEPLOY_CLUSTER -and ($null -ne $DB_PAT)) {
             
             $HEADERS = @{
                 "Authorization" = "Bearer $DB_PAT"
-                
             }
             
             try {
@@ -251,68 +234,6 @@ if ($CTRL_DEPLOY_CLUSTER -and ($null -ne $DB_PAT)) {
     else {
         Write-Output "[ERROR]: Cluster was not created"
     }
-}
-
-# creating metastore
-if ($null -ne $DB_PAT) {
-Write-Host "creating metastore"
-# Set the headers        
-$HEADER = @{
-    "Authorization" = "Bearer $TOKEN"
-    "Content-Type"  = "application/json"
-}
-
-$HEADER
-
-# Set the request body
-# $BODY = @"
-# {
-#     "name": "adnocpoccatalog",
-#     "storage_root": "abfss://$SA_CONTAINER@$SA_METASTORE.dfs.core.windows.net/",
-#     "region": "eastus"
-# }
-# "@
-
-$BODY = @"
-{
-    "metastore_info": {
-    "name": "adnocpoccatalog",
-    "storage_root": "abfss://$SA_CONTAINER@$SA_METASTORE.dfs.core.windows.net/",
-    "region": "eastus"
-    }
-}
-"@
-    
-$BODY
-
-$metastoreuri = "https://accounts.azuredatabricks.net/api/2.0/accounts/e3fee832-01a5-4a5f-8ff0-2bbe4ce02caa/metastores"
-$metastoreuri
-
-# https request for creating metastore
-  try {
-    Write-Output "Attempt 1: creating metastore"
-    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADER -Body $BODY 
-    $response
-    Write-Output "Successful: Databricks API for creating the cluster is called"
-  }
-  catch {
-    Write-Host "Error while calling the Databricks API for creating metastore"
-    $errorMessage = $_.Exception.Message
-    Write-Host "Error message: $errorMessage"
-    Start-Sleep -Seconds $RETRY_TIME
-    try{
-    Write-Output "Attempt 2: creating metastore"
-    $response = Invoke-RestMethod -Method POST -Uri $metastoreuri -Headers $HEADER -Body $BODY 
-    $response
-    Write-Output "Successful: Databricks API for creating the cluster is called"
-    }
-    catch {
-    Write-Host "Error while calling the Databricks API for creating metastore"
-    $errorMessage = $_.Exception.Message
-    Write-Host "Error message: $errorMessage"
-    }
-}
-
 }
 
 # Creating Folder strucrure and Importing Notebooks
@@ -1283,43 +1204,47 @@ if ($null -ne $DB_PAT) {
     }
 }
 
-# Deploy a DLT pipeline
-if ($CTRL_DEPLOY_PIPELINE -and ($null -ne $DB_PAT)) {
+# Import Unity Catalog notebook
+if ($null -ne $DB_PAT) {
     
-    Write-Host "Task: Deploy pipeline"
+    Write-Host "Task: Import Unity Catalog notebook"
     # Set the headers
     $headers = @{Authorization = "Bearer $DB_PAT" }
+    
+    
+    # Set the path to the notebook to be imported
+    $url = "$NOTEBOOK_PATH/Unity-Catalog.ipynb"
 
-    $pipeline_notebook_path = "/Shared/$CTRL_SYNTAX/azure_sql_db"
+    # Get the notebook
+    $Webresults = Invoke-WebRequest $url -UseBasicParsing
 
-    # Create a pipeline configurations
-    $pipelineConfig = @{
-        name                  = $PIPELINENAME
-        storage               = $STORAGE
-        target                = $TARGETSCHEMA
-        clusters              = @{
-            label     = 'default'
-            autoscale = @{
-                min_workers = $MINWORKERS
-                max_workers = $MAXWORKERS
-                mode        = 'ENHANCED'
-            }
-        }
-        libraries             = @{
-            notebook = @{
-                path = $pipeline_notebook_path
-            }
-        }
-        continuous            = 'false'
-        allow_duplicate_names = 'true' 
+    # Read the notebook file
+    $notebookContent = $Webresults.Content
+
+    # Base64 encode the notebook content
+    $notebookBase64 = [System.Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes($notebookContent))
+        
+    # Set the path
+    $path = "/Shared/Unity-Catalog";
+        
+    # Set the request body
+    $unitycatalogbody = @{
+        "content"  = $notebookBase64
+        "path"     = $path
+        "language" = "PYTHON"
+        "format"   = "JUPYTER"
     }
+
+    # Convert the request body to JSON
+    $jsonBody = ConvertTo-Json -Depth 100 $requestBody
 
     try {
-        Invoke-RestMethod -Uri "https://$WorkspaceUrl/api/2.0/pipelines" -Method POST -Headers $headers -Body ($pipelineConfig | ConvertTo-Json -Depth 10)
-        Write-Host "Successful: Pipeline is created"
+
+        Invoke-RestMethod -Method POST -Uri "https://$WorkspaceUrl/api/2.0/workspace/import" -Headers $headers -Body $unitycatalogbody
+        Write-Host "Successful: Unity catalog notebook is imported"
     }
     catch {
-        Write-Host "Error while calling the Azure Databricks API for creating the pipeline"
+        Write-Host "Error while calling the Azure Databricks API for importing the notebook"
         $errorMessage = $_.Exception.Message
         Write-Host "Error message: $errorMessage"
     }
